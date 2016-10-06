@@ -48,13 +48,19 @@ bbb-conf --enablewebrtc
 
 apt-get -y -q autoremove
 apt-get -y clean
+SCRIPT
+
+$startup_script = <<SCRIPT
+
+export DEBIAN_FRONTEND=noninteractive
+
 bbb-conf --clean
 bbb-conf --check
 bbb-conf --setip $(ifconfig eth1 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
 
 echo "Finish setup on http://$(ifconfig eth1 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')"
-
 SCRIPT
+
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
@@ -126,4 +132,11 @@ Vagrant.configure("2") do |config|
   # SHELL
 
   config.vm.provision :shell, inline: $script
+
+  config.vm.provision "fix-no-tty", type: "shell" do |s|
+      s.privileged = false
+      s.inline = "sudo sed -i '/tty/!s/mesg n/tty -s \\&\\& mesg n/' /root/.profile"
+  end
+
+  config.vm.provision :shell, inline: $startup_script, run: "always"
 end
